@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Editor — Добавить сертификат</title>
+<style>
+  body{font-family:Segoe UI,Arial;background:#f7fafc;margin:0;padding:20px}
+  .wrap{max-width:700px;margin:20px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,0.04)}
+  input,select,button{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;font-size:14px}
+  
+button {
+  background: linear-gradient(90deg, #06b6d4, #0ea5e9);
+  color: #fff;
+  border: 0;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 8px;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(6, 182, 212, 0.3);
+  transition: all 0.25s ease;
+}
+button:hover {
+  background: linear-gradient(90deg, #0891b2, #0284c7);
+  box-shadow: 0 4px 10px rgba(6, 182, 212, 0.4);
+}
+
+  .muted{color:#666;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>Редактор</h2>
+  <div id="loginBlock">
+    <div style="display:flex;gap:8px"><input id="login" value="editor"><input id="password" value="editor2025" type="password"></div>
+    <div style="margin-top:8px"><button id="btnLogin">Войти</button> <span id="msg" class="muted"></span></div>
+  </div>
+
+  <div id="editorUI" style="display:none;margin-top:12px">
+    <h3>Создать сертификат на основе курса</h3>
+    <div>
+      <select id="courseSelect"><option>Загрузка курсов...</option></select>
+    </div>
+    <div style="margin-top:8px">
+      <input id="auto_hours" placeholder="Часы (авто)" disabled>
+    </div>
+    <div style="margin-top:8px">
+      <input id="auto_org" placeholder="Организация (авто)" disabled>
+    </div>
+    <div style="margin-top:8px">
+      <input id="auto_date" placeholder="Дата (авто)" disabled>
+    </div>
+
+    <div style="margin-top:8px">
+      <input id="fio" placeholder="ФИО участника">
+    </div>
+    <div style="margin-top:8px">
+      <input id="number" placeholder="Номер сертификата (0001-2025)">
+    </div>
+    <div style="margin-top:8px">
+      <button id="btnAdd">Добавить сертификат</button>
+    </div>
+    <div style="margin-top:8px">
+      <button id="btnReload">Обновить список</button>
+    </div>
+    <p id="status" class="muted"></p>
+
+    <h3 style="margin-top:12px">Список сертификатов</h3>
+    <div style="margin-bottom:8px">
+      <input id="search" placeholder="Поиск по ФИО или номеру"><button id="btnSearch">Найти</button>
+    </div>
+    <div id="list"></div>
+
+    <div style="margin-top:12px"><button id="btnLogout" style="background:#ef4444;color:#fff">Выйти</button></div>
+  </div>
+</div>
+
+<script>
+const API = "/api";
+let token = null;
+
+document.getElementById("btnLogin").onclick = async () => {
+  const login = document.getElementById("login").value;
+  const password = document.getElementById("password").value;
+  const r = await fetch("/api/login", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ login, password })});
+  const j = await r.json();
+  if (r.ok && j.success && j.role === "editor") {
+    token = j.token;
+    document.getElementById("loginBlock").style.display="none";
+    document.getElementById("editorUI").style.display="block";
+    loadCourses();
+    loadList();
+  } else {
+    document.getElementById("msg").textContent = "Ошибка входа";
+  }
+};
+
+async function loadCourses(){
+  const r = await fetch(API + "/courses");
+  const courses = await r.json();
+  const sel = document.getElementById("courseSelect");
+  sel.innerHTML = '<option value="">Выберите курс</option>';
+  courses.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = (c.title.ru||c.title.en||c.title.kk) + ` — ${c.hours}ч`;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById("courseSelect").onchange = async function(){
+  const id = this.value;
+  if (!id) { document.getElementById("auto_hours").value=""; document.getElementById("auto_org").value=""; document.getElementById("auto_date").value=""; return; }
+  const r = await fetch(API + "/courses");
+  const courses = await r.json();
+  const c = courses.find(x => String(x.id) === String(id));
+  if (c) {
+    document.getElementById("auto_hours").value = c.hours;
+    // show org in ru by default
+    document.getElementById("auto_org").value = (c.org && (c.org.ru || c.org.en || c.org.kk)) || "";
+    document.getElementById("auto_date").value = c.date || "";
+  }
+};
+
+document.getElementById("btnAdd").onclick = async () => {
+  const courseId = document.getElementById("courseSelect").value;
+  const fio = document.getElementById("fio").value.trim();
+  const number = document.getElementById("number").value.trim();
+  if (!courseId || !fio || !number) { document.getElementById("status").textContent="Заполните поля"; return; }
+  if (!/^\d{4}-\d{4}$/.test(number)) { document.getElementById("status").textContent="Неверный формат номера"; return; }
+  const r = await fetch(API + "/certificates", { method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer " + token}, body: JSON.stringify({ courseId, number, fio })});
+  const j = await r.json();
+  if (r.ok && j.success) { document.getElementById("status").textContent="Добавлено"; loadList(); } else document.getElementById("status").textContent = j.message || "Ошибка";
+};
+
+async function loadList(q) {
+  try {
+    const url = q ? (API + "/search?q=" + encodeURIComponent(q)) : (API + "/certificates");
+    const res = await fetch(url, { headers: {"Authorization":"Bearer " + token} });
+    const data = await res.json();
+    const el = document.getElementById("list");
+    el.innerHTML = "";
+    if (!data.length) { el.innerHTML = "<div class='muted'>Нет сертификатов</div>"; return; }
+    data.forEach(it => {
+      const course = it.course || {};
+      const div = document.createElement("div"); div.className="card";
+      div.innerHTML = `<b>${it.number}</b> — ${it.fio}<div class="muted">${(course.title && (course.title.ru||course.title.en||course.title.kk)) || "Курс удалён"} — ${course.hours||"-"}ч</div>`;
+      el.appendChild(div);
+    });
+  } catch(e){ document.getElementById("list").innerText = "Ошибка"; }
+}
+document.getElementById("btnReload").onclick = () => loadList();
+document.getElementById("btnSearch").onclick = () => loadList(document.getElementById("search").value.trim());
+document.getElementById("btnLogout").onclick = () => { token = null; location.reload(); };
+</script>
+</body>
+</html>

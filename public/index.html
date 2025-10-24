@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Проверка сертификата</title>
+  <style>
+    body{font-family:Segoe UI,Arial;background:linear-gradient(135deg,#4e73df,#1cc88a);min-height:100vh;margin:0;display:flex;align-items:center;justify-content:center}
+    .card{background:#fff;padding:24px;border-radius:12px;max-width:560px;width:92%;box-shadow:0 10px 30px rgba(0,0,0,0.12);color:#111}
+    select,input,button{padding:10px;border-radius:8px;border:1px solid #ddd;font-size:15px;width:100%;margin-top:8px}
+    button{background:#2563eb;color:#fff;border:0;cursor:pointer}
+    .result{margin-top:12px;padding:12px;border-radius:8px;background:#f3f6ff}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 id="title">Проверка сертификата</h2>
+
+    <label id="langLabel">Язык интерфейса</label>
+    <select id="lang">
+      <option value="ru">Русский</option>
+      <option value="kk">Қазақша</option>
+      <option value="en">English</option>
+    </select>
+
+    <input id="number" placeholder="Введите номер сертификата (0001-2025)" />
+    <button id="btn">Проверить</button>
+
+    <div id="out" class="result" style="display:none"></div>
+  </div>
+
+<script>
+const T = {
+  ru: {
+    title: "Проверка сертификата",
+    langLabel: "Язык интерфейса",
+    placeholder: "Введите номер сертификата (0001-2025)",
+    btn: "Проверить",
+    notfound: "Сертификат не найден",
+    found: "✅ Сертификат найден",
+    fields: { number: "Номер", fio: "ФИО", course: "Курс", hours: "Часы", date: "Дата", org: "Организация", format: "Формат" }
+  },
+  kk: {
+    title: "Сертификатты тексеру",
+    langLabel: "Интерфейс тілі",
+    placeholder: "Сертификат нөмірін енгізіңіз (0001-2025)",
+    btn: "Тексеру",
+    notfound: "Сертификат табылған жоқ",
+    found: "✅ Сертификат табылды",
+    fields: { number: "Нөмір", fio: "Аты-жөні", course: "Курс", hours: "Сағат", date: "Күні", org: "Ұйым", format: "Формат" }
+  },
+  en: {
+    title: "Certificate verification",
+    langLabel: "Interface language",
+    placeholder: "Enter certificate number (0001-2025)",
+    btn: "Check",
+    notfound: "Certificate not found",
+    found: "✅ Certificate found",
+    fields: { number: "Number", fio: "Full name", course: "Course", hours: "Hours", date: "Date", org: "Organization", format: "Format" }
+  }
+};
+
+const langSel = document.getElementById("lang");
+const title = document.getElementById("title");
+const langLabel = document.getElementById("langLabel");
+const input = document.getElementById("number");
+const btn = document.getElementById("btn");
+const out = document.getElementById("out");
+
+function applyLang(l) {
+  const t = T[l];
+  title.textContent = t.title;
+  langLabel.textContent = t.langLabel;
+  input.placeholder = t.placeholder;
+  btn.textContent = t.btn;
+}
+applyLang("ru");
+langSel.onchange = () => applyLang(langSel.value);
+
+btn.onclick = async () => {
+  out.style.display = "none";
+  const num = input.value.trim();
+  if (!/^\d{4}-\d{4}$/.test(num)) { out.style.display = "block"; out.textContent = "Неверный формат номера (пример: 0001-2025)"; return; }
+  try {
+    const res = await fetch("/api/check/" + encodeURIComponent(num));
+    const lang = langSel.value;
+    const t = T[lang];
+    if (!res.ok) { out.style.display = "block"; out.textContent = t.notfound; return; }
+    const j = await res.json();
+    const cert = j.certificate;
+    const course = j.course || {};
+    const courseName = (lang === "kk" ? (course.title && course.title.kk) : (lang === "en" ? (course.title && course.title.en) : (course.title && course.title.ru))) || (course.title && (course.title.ru || course.title.en || course.title.kk)) || "";
+    const orgName = (lang === "kk" ? (course.org && course.org.kk) : (lang === "en" ? (course.org && course.org.en) : (course.org && course.org.ru))) || "";
+    const formatName = (lang === "kk" ? (course.format && course.format.kk) : (lang === "en" ? (course.format && course.format.en) : (course.format && course.format.ru))) || "";
+    out.style.display = "block";
+    out.innerHTML = `
+      <strong>${t.found}</strong><br><br>
+      <b>${t.fields.number}:</b> ${cert.number}<br>
+      <b>${t.fields.fio}:</b> ${cert.fio}<br>
+      <b>${t.fields.course}:</b> ${courseName}<br>
+      <b>${t.fields.format}:</b> ${formatName}<br>
+      <b>${t.fields.hours}:</b> ${course.hours || "-"}<br>
+      <b>${t.fields.date}:</b> ${course.date || "-"}<br>
+      <b>${t.fields.org}:</b> ${orgName}
+    `;
+  } catch (e) {
+    out.style.display = "block";
+    out.textContent = "Ошибка соединения";
+  }
+};
+</script>
+</body>
+</html>
