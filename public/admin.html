@@ -1,185 +1,195 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Панель администратора</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f5f5f5;
-    }
-    h2 {
-      text-align: center;
-    }
-    #certTable {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-      background: white;
-    }
-    #certTable th, #certTable td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: left;
-    }
-    #certTable th {
-      background: #e3e3e3;
-    }
-    .form-container {
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-      max-width: 600px;
-      margin: 20px auto;
-    }
-    input {
-      padding: 6px;
-      width: 100%;
-      margin-bottom: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      padding: 8px 12px;
-      cursor: pointer;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .logout {
-      float: right;
-      background: #dc3545;
-    }
-    .logout:hover {
-      background: #b02a37;
-    }
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin — Курсы</title>
+<style>
+  body{font-family:Segoe UI,Arial;background:#f3f6fb;margin:0;padding:20px}
+  .wrap{max-width:900px;margin:20px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.06)}
+  input,select,button,textarea{padding:8px;border-radius:8px;border:1px solid #ccc;font-size:14px}
+  input,select,textarea{width:100%}
+  button{background:#2563eb;color:#fff;border:0;padding:10px 14px;cursor:pointer}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .card{padding:10px;border:1px solid #eef2ff;border-radius:8px;margin-bottom:10px}
+  .muted{color:#666;font-size:13px}
+</style>
 </head>
 <body>
-  <h2>Панель администратора</h2>
-  <button class="logout" id="logoutBtn">Выйти</button>
+<div class="wrap">
+  <h1>Админ — Управление курсами</h1>
 
-  <div class="form-container">
-    <h3>Добавить сертификат</h3>
-    <input id="fio" placeholder="ФИО" />
-    <input id="course" placeholder="Название курса" />
-    <input id="date" placeholder="Дата выдачи (например: 2025-10-26)" />
-    <input id="org" placeholder="Организация" />
-    <input id="number" placeholder="Номер сертификата" />
-    <button id="addBtn">Добавить</button>
-    <div id="msg" style="color: green; margin-top: 5px;"></div>
+  <div id="loginBlock">
+    <div class="grid">
+      <input id="login" placeholder="Логин" value="admin">
+      <input id="password" placeholder="Пароль" value="admin2025" type="password">
+    </div>
+    <div style="margin-top:8px"><button id="btnLogin">Войти</button> <span id="loginMsg" class="muted"></span></div>
   </div>
 
-  <h3>Список сертификатов</h3>
-  <table id="certTable">
-    <thead>
-      <tr>
-        <th>ФИО</th>
-        <th>Курс</th>
-        <th>Дата</th>
-        <th>Организация</th>
-        <th>Номер</th>
-        <th>Действие</th>
-      </tr>
-    </thead>
-    <tbody id="certBody">
-      <tr><td colspan="6">Загрузка...</td></tr>
-    </tbody>
-  </table>
+  <div id="adminUI" style="display:none;margin-top:16px">
+    <h3>Добавить курс (обязательно: формат обучения)</h3>
+    <div class="card">
+      <div class="grid">
+        <input id="title_ru" placeholder="Название курса (русский)">
+        <input id="title_kk" placeholder="Курс (қазақша) (необязательно)">
+      </div>
+      <div class="grid" style="margin-top:8px">
+        <input id="title_en" placeholder="Course name (english) (необязательно)">
+        <input id="hours" placeholder="Количество часов">
+      </div>
 
-  <script src="main.js"></script>
-  <script>
-    async function loadCerts() {
-      const body = document.getElementById("certBody");
-      body.innerHTML = "<tr><td colspan='6'>Загрузка...</td></tr>";
-      try {
-        const res = await fetch("/api/certificates");
-        const data = await res.json();
-        if (data.success) {
-          if (data.certs.length === 0) {
-            body.innerHTML = "<tr><td colspan='6'>Нет сертификатов</td></tr>";
-            return;
-          }
-          body.innerHTML = data.certs.map(c => `
-            <tr>
-              <td>${escapeHtml(c.fio)}</td>
-              <td>${escapeHtml(c.course)}</td>
-              <td>${escapeHtml(c.date)}</td>
-              <td>${escapeHtml(c.org)}</td>
-              <td>${escapeHtml(c.number)}</td>
-              <td><button onclick="deleteCert('${c.number}')">Удалить</button></td>
-            </tr>
-          `).join("");
-        } else {
-          body.innerHTML = "<tr><td colspan='6'>Ошибка загрузки</td></tr>";
-        }
-      } catch (err) {
-        body.innerHTML = "<tr><td colspan='6'>Ошибка сервера</td></tr>";
-      }
-    }
+      <div class="grid" style="margin-top:8px">
+        <input id="date" placeholder="Дата проведения (YYYY-MM-DD)">
+        <select id="format_select">
+          <option value="">Выберите формат обучения</option>
+          <option value="online">Онлайн / Онлайн / Online</option>
+          <option value="offline">Офлайн / Офлайн / Offline</option>
+          <option value="mixed">Смешанный / Аралас / Mixed</option>
+        </select>
+      </div>
 
-    async function deleteCert(number) {
-      if (!confirm("Удалить сертификат №" + number + "?")) return;
-      await fetch("/api/delete/" + encodeURIComponent(number), { method: "DELETE" });
-      loadCerts();
-    }
+      <div style="margin-top:8px">
+        <textarea id="org_ru" placeholder="Организация (русский)"></textarea>
+        <textarea id="org_kk" placeholder="Ұйым (қазақша) (необязательно)"></textarea>
+        <textarea id="org_en" placeholder="Organization (english) (необязательно)"></textarea>
+      </div>
 
-    document.getElementById("addBtn").addEventListener("click", async () => {
-      const fio = document.getElementById("fio").value.trim();
-      const course = document.getElementById("course").value.trim();
-      const date = document.getElementById("date").value.trim();
-      const org = document.getElementById("org").value.trim();
-      const number = document.getElementById("number").value.trim();
-      const msg = document.getElementById("msg");
+      <div style="margin-top:8px">
+        <button id="btnAddCourse">Добавить курс</button>
+        <button id="btnReloadCourses" style="margin-left:8px">Обновить</button>
+        <span id="courseMsg" class="muted"></span>
+      </div>
+    </div>
 
-      if (!fio || !course || !date || !org || !number) {
-        msg.style.color = "red";
-        msg.textContent = "Заполните все поля";
-        return;
-      }
+    <h3>Справочник курсов</h3>
+    <div id="coursesList"></div>
 
-      try {
-        const res = await fetch("/api/add", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fio, course, date, org, number })
-        });
-        const data = await res.json();
-        if (data.success) {
-          msg.style.color = "green";
-          msg.textContent = "Сертификат добавлен!";
-          loadCerts();
-          document.querySelectorAll(".form-container input").forEach(i => i.value = "");
-        } else {
-          msg.style.color = "red";
-          msg.textContent = data.message || "Ошибка добавления";
-        }
-      } catch (err) {
-        msg.style.color = "red";
-        msg.textContent = "Ошибка подключения к серверу";
-      }
-    });
+    <hr>
+    <h3>Управление сертификатами</h3>
+    <div class="card">
+      <div class="grid">
+        <select id="courseSelect"><option>Выберите курс для сертификата</option></select>
+        <input id="cert_number" placeholder="Номер сертификата (0001-2025)">
+      </div>
+      <div style="margin-top:8px"><input id="cert_fio" placeholder="ФИО владельца"></div>
+      <div style="margin-top:8px">
+        <button id="btnAddCert">Добавить сертификат</button>
+        <button id="btnReloadCerts" style="margin-left:8px">Обновить сертификаты</button>
+        <span id="certMsg" class="muted"></span>
+      </div>
+    </div>
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-      window.location.href = "index.html";
-    });
+    <h3>Сертификаты</h3>
+    <div>
+      <input id="searchCert" placeholder="Поиск по ФИО или номеру" style="width:60%;display:inline-block">
+      <button id="btnSearchCert">Найти</button>
+    </div>
+    <div id="certsList" style="margin-top:10px"></div>
 
-    function escapeHtml(s) {
-      return String(s || "").replace(/[&<>"']/g, (m) => (
-        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]
-      ));
-    }
+    <div style="margin-top:12px"><button id="btnLogout" style="background:#ef4444">Выйти</button></div>
+  </div>
+</div>
 
+<script>
+const API = "/api";
+let token = null;
+function authHeaders(headers = {}) { if (token) headers["Authorization"] = "Bearer " + token; return headers; }
+
+// login
+document.getElementById("btnLogin").onclick = async () => {
+  const login = document.getElementById("login").value;
+  const password = document.getElementById("password").value;
+  const r = await fetch("/api/login", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ login, password })});
+  const j = await r.json();
+  if (r.ok && j.success && j.role === "admin") {
+    token = j.token;
+    document.getElementById("loginBlock").style.display = "none";
+    document.getElementById("adminUI").style.display = "block";
+    loadCourses();
     loadCerts();
-  </script>
+  } else {
+    document.getElementById("loginMsg").textContent = "Ошибка входа";
+  }
+};
+
+// load courses
+async function loadCourses(){
+  const r = await fetch(API + "/courses");
+  const courses = await r.json();
+  const el = document.getElementById("coursesList");
+  const sel = document.getElementById("courseSelect");
+  el.innerHTML = ""; sel.innerHTML = '<option value="">Выберите курс</option>';
+  if (!courses.length) el.innerHTML = "<div>Пусто</div>";
+  courses.forEach(c => {
+    const d = document.createElement("div"); d.className="card";
+    d.innerHTML = `<b>#${c.id} ${c.title.ru || c.title.en || c.title.kk}</b><div class="muted">${c.hours} ч — ${c.date}</div>
+      <div style="margin-top:8px"><button onclick="deleteCourse(${c.id})" style="background:#ef4444">Удалить</button></div>`;
+    el.appendChild(d);
+    const opt = document.createElement("option"); opt.value=c.id; opt.textContent=(c.title.ru||c.title.en||c.title.kk)+` (${c.hours}ч)`;
+    sel.appendChild(opt);
+  });
+}
+document.getElementById("btnReloadCourses").onclick = loadCourses;
+
+document.getElementById("btnAddCourse").onclick = async () => {
+  const title = { ru: document.getElementById("title_ru").value.trim(), kk: document.getElementById("title_kk").value.trim(), en: document.getElementById("title_en").value.trim() };
+  const hours = document.getElementById("hours").value.trim();
+  const date = document.getElementById("date").value.trim();
+  const fmt = document.getElementById("format_select").value;
+  const format = fmt === "online" ? { ru:"Онлайн", kk:"Онлайн", en:"Online" } : fmt === "offline" ? { ru:"Офлайн", kk:"Офлайн", en:"Offline" } : { ru:"Смешанный", kk:"Аралас", en:"Mixed" };
+  const org = { ru: document.getElementById("org_ru").value.trim(), kk: document.getElementById("org_kk").value.trim(), en: document.getElementById("org_en").value.trim() };
+  const res = await fetch(API + "/courses", { method:"POST", headers: authHeaders({"Content-Type":"application/json"}), body: JSON.stringify({ title, format, hours, date, org })});
+  const j = await res.json();
+  if (res.ok && j.success) { document.getElementById("courseMsg").textContent="Добавлено"; loadCourses(); } else document.getElementById("courseMsg").textContent = j.message || "Ошибка";
+};
+
+async function deleteCourse(id){ if (!confirm("Удалить курс?")) return; const r = await fetch(API + "/courses/" + id, { method:"DELETE", headers: authHeaders()}); const j=await r.json(); if (r.ok && j.success) loadCourses(); else alert(j.message||"Ошибка"); }
+
+// certificates
+document.getElementById("btnAddCert").onclick = async () => {
+  const courseId = document.getElementById("courseSelect").value;
+  const number = document.getElementById("cert_number").value.trim();
+  const fio = document.getElementById("cert_fio").value.trim();
+  if (!courseId || !number || !fio) { document.getElementById("certMsg").textContent="Заполните поля"; return; }
+  const r = await fetch(API + "/certificates", { method:"POST", headers: authHeaders({"Content-Type":"application/json"}), body: JSON.stringify({ number, fio, courseId })});
+  const j = await r.json();
+  if (r.ok && j.success) { document.getElementById("certMsg").textContent="Добавлено"; loadCerts(); } else document.getElementById("certMsg").textContent = j.message || "Ошибка";
+};
+
+async function loadCerts(q){
+  try{
+    const url = q ? (API + "/search?q=" + encodeURIComponent(q)) : (API + "/certificates");
+    const r = await fetch(url, { headers: authHeaders() });
+    if (!r.ok) { document.getElementById("certsList").innerText = "Ошибка"; return; }
+    const certs = await r.json();
+    const el = document.getElementById("certsList");
+    el.innerHTML = "";
+    if (!certs.length) { el.innerHTML = "<div class='muted'>Нет сертификатов</div>"; return; }
+    certs.forEach(c => {
+      const course = c.course || {};
+      const d = document.createElement("div"); d.className="card";
+      d.innerHTML = `<b>${c.number}</b> — ${c.fio}<div class="muted">${(course.title&& (course.title.ru||course.title.en||course.title.kk))||'Курс удалён'} — ${course.hours||"-"}ч</div>
+        <div style="margin-top:8px"><button onclick="deleteCert('${c.number}')" style="background:#ef4444">Удалить</button></div>`;
+      el.appendChild(d);
+    });
+  }catch(e){ document.getElementById("certsList").innerText = "Ошибка"; }
+}
+document.getElementById("btnReloadCerts").onclick = () => loadCerts();
+document.getElementById("btnSearchCert").onclick = () => loadCerts(document.getElementById("searchCert").value.trim());
+
+async function deleteCert(number){
+  if (!confirm("Удалить сертификат?")) return;
+  const r = await fetch(API + "/certificates/" + encodeURIComponent(number), { method:"DELETE", headers: authHeaders() });
+  const j = await r.json(); if (r.ok && j.success) loadCerts(); else alert(j.message||"Ошибка");
+}
+
+document.getElementById("btnLogout").onclick = () => { token = null; document.getElementById("adminUI").style.display="none"; document.getElementById("loginBlock").style.display="block"; };
+
+// initial helpers
+async function loadInitial(){
+  // nothing here
+}
+loadInitial();
+</script>
 </body>
 </html>
