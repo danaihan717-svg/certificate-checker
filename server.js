@@ -76,7 +76,7 @@ app.get("/api/courses", (req, res) => {
   res.json(courses);
 });
 
-// Add course (admin only) — course must include title {ru,kk,en}, format {ru,kk,en}, hours, date, org {ru,kk,en}
+// Add course (admin only)
 app.post("/api/courses", authMiddleware, (req, res) => {
   if (req.user.role !== "admin") return res.status(403).json({ success: false, message: "Forbidden" });
 
@@ -111,19 +111,17 @@ app.delete("/api/courses/:id", authMiddleware, (req, res) => {
 app.get("/api/certificates", authMiddleware, (req, res) => {
   if (!["admin", "editor"].includes(req.user.role)) return res.status(403).json({ success: false, message: "Forbidden" });
   const certs = readJson(CERTS_FILE);
-  // attach course brief
   const courses = readJson(COURSES_FILE);
   const resArr = certs.map(c => ({ ...c, course: courses.find(cc => Number(cc.id) === Number(c.courseId)) || null }));
   res.json(resArr);
 });
 
-// add certificate (editor/admin) — editor must supply courseId (existing)
+// add certificate (editor/admin)
 app.post("/api/certificates", authMiddleware, (req, res) => {
   if (!["admin", "editor"].includes(req.user.role)) return res.status(403).json({ success: false, message: "Forbidden" });
   const body = req.body || {};
   const { number, fio, courseId } = body;
 
-  // Validate number format: 4digits-4digits e.g. 0001-2025
   if (!number || !/^\d{4}-\d{4}$/.test(number)) {
     return res.status(400).json({ success: false, message: "Invalid number format. Use 0001-2025" });
   }
@@ -162,18 +160,18 @@ app.delete("/api/certificates/:number", authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
-// search (admin/editor) by q in number or fio
+// search (admin/editor)
 app.get("/api/search", authMiddleware, (req, res) => {
   if (!["admin", "editor"].includes(req.user.role)) return res.status(403).json({ success: false, message: "Forbidden" });
   const q = String(req.query.q || "").toLowerCase();
   const certs = readJson(CERTS_FILE);
   const courses = readJson(COURSES_FILE);
-  const filtered = certs.filter(c => String(c.number).toLowerCase().includes(q) || (c.fio||"").toLowerCase().includes(q))
+  const filtered = certs.filter(c => String(c.number).toLowerCase().includes(q) || (c.fio || "").toLowerCase().includes(q))
     .map(c => ({ ...c, course: courses.find(cc => Number(cc.id) === Number(c.courseId)) || null }));
   res.json(filtered);
 });
 
-// public check by number (user-facing) — returns certificate + course with translations
+// public check by number
 app.get("/api/check/:number", (req, res) => {
   const number = req.params.number;
   if (!/^\d{4}-\d{4}$/.test(number)) {
@@ -187,5 +185,27 @@ app.get("/api/check/:number", (req, res) => {
   res.json({ success: true, certificate: cert, course });
 });
 
-// Start
+// ---------- Admin & Editor panels ----------
+app.use("/admin", express.static(path.join(__dirname, "admin")));
+app.use("/editor", express.static(path.join(__dirname, "editor")));
+
+// fallback routes for single-page panels
+app.get("/admin/*", (req, res) => {
+  res.sendFile(path.join(__dirname, "admin", "index.html"));
+});
+app.get("/editor/*", (req, res) => {
+  res.sendFile(path.join(__dirname, "editor", "index.html"));
+});
+
+// ---------- Main site ----------
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// fallback for any unknown routes
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// ---------- Start ----------
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
